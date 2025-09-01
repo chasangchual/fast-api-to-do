@@ -1,8 +1,9 @@
-from typing import Any, Generator
+from typing import Any, Generator, Annotated
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.ext.declarative import declarative_base
+from fastapi import Depends
 
 SQLALCHEMY_DATABASE_URL = 'postgresql+psycopg2://cwealth:@localhost:54320/todo'
 
@@ -17,3 +18,5 @@ def get_db() -> Generator[Session, Any, None]:
         yield db
     finally:
         db.close()
+
+db_dependency = Annotated[Session, Depends(get_db)]
