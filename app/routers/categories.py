@@ -12,10 +12,12 @@ categories_router = APIRouter(
     prefix="/categories"
 )
 
+
 @categories_router.get("", status_code=status.HTTP_200_OK)
 def get_all_categories(db: db_dependency) -> List[CategoryResponse]:
     categories = db.query(Category).all()
     return [CategoryResponse(category) for category in categories]
+
 
 @categories_router.get("/{public_id}", status_code=status.HTTP_200_OK)
 def get_category_by_id(public_id: UUID, db: db_dependency) -> CategoryResponse:
@@ -23,6 +25,7 @@ def get_category_by_id(public_id: UUID, db: db_dependency) -> CategoryResponse:
     if category is None:
         raise HTTPException(status_code=404, detail=f"Category with id [{public_id}] not found")
     return CategoryResponse(category)
+
 
 @categories_router.post("", status_code=status.HTTP_201_CREATED)
 def create_category(category: CategoryRequest, db: db_dependency) -> CategoryResponse:
@@ -35,6 +38,7 @@ def create_category(category: CategoryRequest, db: db_dependency) -> CategoryRes
     db.commit()
     db.refresh(db_category)
     return CategoryResponse(db_category)
+
 
 @categories_router.put("/{public_id}", status_code=status.HTTP_201_CREATED)
 def create_category(public_id: UUID, category: CategoryRequest, db: db_dependency) -> CategoryResponse:
@@ -52,3 +56,10 @@ def create_category(public_id: UUID, category: CategoryRequest, db: db_dependenc
     db.refresh(to_be_updated)
     return CategoryResponse(to_be_updated)
 
+@categories_router.delete("/{public_id}", status_code=status.HTTP_200_OK)
+def get_category_by_id(public_id: UUID, db: db_dependency):
+    category = db.query(Category).filter(Category.public_id == public_id).first()
+    if category is None:
+        raise HTTPException(status_code=404, detail=f"Category with id [{public_id}] not found")
+    db.delete(category)
+    db.commit()
