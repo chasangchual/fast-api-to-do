@@ -20,4 +20,4 @@ def get_session() -> Generator[Session, Any, None]:
         session.close()
 
 
-db_dependency = Annotated[Session, Depends(get_session)]
+db_session = Annotated[Session, Depends(get_session)]

@@ -1,10 +1,10 @@
 from dependency_injector import containers, providers
 
-from app.config.database import db_dependency
+from app.config.database import db_session
 from app.setvices.catetory_service import CategoryService
 from app.setvices.todo_service import TodoService
 
 class ServiceContainer(containers.DeclarativeContainer):
     config = providers.Configuration()
-    category_service = providers.Factory(CategoryService, db=db_dependency)
-    todo_service = providers.Factory(TodoService, db=db_dependency)
+    category_service = providers.Factory(CategoryService, db=db_session)
+    todo_service = providers.Factory(TodoService, db=db_session)
