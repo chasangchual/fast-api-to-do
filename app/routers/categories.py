@@ -1,12 +1,14 @@
 from typing import Annotated, List
 from uuid import UUID
-
 from fastapi import APIRouter, HTTPException
-from sqlalchemy.orm import Session
+from fastapi.params import Depends
+from dependency_injector.wiring import inject, Provide
 from starlette import status
 from app.models.todo import Category
 from app.config.database import db_dependency
-from app.routers.dto.todo import CategoryResponse, CategoryRequest
+from app.routers.dto.category import CategoryResponse, CategoryRequest
+from app.setvices.catetory_service import CategoryService
+from app.setvices.service_container import ServiceContainer
 
 categories_router = APIRouter(
     prefix="/categories"
@@ -14,52 +16,62 @@ categories_router = APIRouter(
 
 
 @categories_router.get("", status_code=status.HTTP_200_OK)
-def get_all_categories(db: db_dependency) -> List[CategoryResponse]:
-    categories = db.query(Category).all()
+@inject
+def get_all(session: db_dependency,
+            category_service: CategoryService = Depends(Provide[ServiceContainer.category_service])) -> List[
+    CategoryResponse]:
+    categories = category_service.find_all(session)
     return [CategoryResponse(category) for category in categories]
 
 
 @categories_router.get("/{public_id}", status_code=status.HTTP_200_OK)
-def get_category_by_id(public_id: UUID, db: db_dependency) -> CategoryResponse:
-    category = db.query(Category).filter(Category.public_id == public_id).first()
+@inject
+def find_by_id(public_id: UUID, session: db_dependency,
+               category_service: CategoryService = Depends(
+                   Provide[ServiceContainer.category_service])) -> CategoryResponse:
+    category = category_service.find_by_id(public_id, session)
     if category is None:
         raise HTTPException(status_code=404, detail=f"Category with id [{public_id}] not found")
     return CategoryResponse(category)
 
 
 @categories_router.post("", status_code=status.HTTP_201_CREATED)
-def create_category(category: CategoryRequest, db: db_dependency) -> CategoryResponse:
-    found = db.query(Category).filter(Category.name == category.name).first()
+@inject
+def create(category: CategoryRequest, session: db_dependency,
+           category_service: CategoryService = Depends(Provide[ServiceContainer.category_service])) -> CategoryResponse:
+    category_service.set_session(session)
+    found = category_service.find_by_name(category.name)
     if found is not None:
         raise HTTPException(status_code=400, detail=f"Category with name [{category.name}] already exists")
 
-    db_category = Category(category.name)
-    db.add(db_category)
-    db.commit()
-    db.refresh(db_category)
-    return CategoryResponse(db_category)
+    new_category = category_service.add(Category(category.name))
+    return CategoryResponse(new_category)
 
 
 @categories_router.put("/{public_id}", status_code=status.HTTP_201_CREATED)
-def create_category(public_id: UUID, category: CategoryRequest, db: db_dependency) -> CategoryResponse:
-    to_be_updated = db.query(Category).filter(Category.public_id == public_id).first()
+@inject
+def update(public_id: UUID, category: CategoryRequest, session: db_dependency,
+           category_service: CategoryService = Depends(Provide[ServiceContainer.category_service])) -> CategoryResponse:
+    category_service.set_session(session)
+    to_be_updated = category_service.find_by_id(public_id)
     if to_be_updated is None:
         raise HTTPException(status_code=404, detail=f"Category with id [{public_id}] not found")
 
-    to_be_updated = db.query(Category).filter(Category.name == category.name).first()
-    if to_be_updated is not None:
+    find_by_name = category_service.find_by_name(category.name)
+    if find_by_name is not None:
         raise HTTPException(status_code=400, detail=f"Category with name [{category.name}] already exists")
 
     to_be_updated.name = category.name
-    db.add(to_be_updated)
-    db.commit()
-    db.refresh(to_be_updated)
+    to_be_updated = category_service.update(to_be_updated)
     return CategoryResponse(to_be_updated)
 
+
 @categories_router.delete("/{public_id}", status_code=status.HTTP_200_OK)
-def get_category_by_id(public_id: UUID, db: db_dependency):
-    category = db.query(Category).filter(Category.public_id == public_id).first()
+@inject
+def delete_by_id(public_id: UUID, session: db_dependency,
+                 category_service: CategoryService = Depends(Provide[ServiceContainer.category_service])):
+    category_service.set_session(session)
+    category = category_service.find_by_id(public_id)
     if category is None:
         raise HTTPException(status_code=404, detail=f"Category with id [{public_id}] not found")
-    db.delete(category)
-    db.commit()
+    category_service.delete(category)

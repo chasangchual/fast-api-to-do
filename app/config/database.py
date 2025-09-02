@@ -12,11 +12,12 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 metadata = Base.metadata
 
-def get_db() -> Generator[Session, Any, None]:
-    db = SessionLocal()
+def get_session() -> Generator[Session, Any, None]:
+    session = SessionLocal()
     try:
-        yield db
+        yield session
     finally:
-        db.close()
+        session.close()
 
-db_dependency = Annotated[Session, Depends(get_db)]
+
+db_dependency = Annotated[Session, Depends(get_session)]
