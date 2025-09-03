@@ -50,7 +50,7 @@ def create_todo(request: TodoRequest, session: db_session,
 
     return TodoResponse(todo)
 
-@categories_router.delete("/{public_id}", status_code=status.HTTP_200_OK)
+@todos_router.delete("/{public_id}", status_code=status.HTTP_200_OK)
 @inject
 def delete_by_id(public_id: UUID, session: db_session,
                  todo_service: TodoService = Depends(Provide[ServiceContainer.todo_service])):
