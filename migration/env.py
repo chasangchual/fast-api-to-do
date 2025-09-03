@@ -5,6 +5,7 @@ from sqlalchemy import pool
 
 from alembic import context
 from app.models.todo import Category, ToDo
+from app.models.user import User, Salt
 from app.config.database import Base
 
 # this is the Alembic Config object, which provides
