@@ -14,8 +14,7 @@ todos_router = APIRouter(
     prefix="/todos"
 )
 
-
-@todos_router.get("", status_code=200)
+@todos_router.get("", status_code=status.HTTP_200_OK)
 @inject
 def get_all(session: db_session,
             todo_service: TodoService = Depends(Provide[ServiceContainer.todo_service])):
@@ -23,13 +22,13 @@ def get_all(session: db_session,
     return [TodoResponse(todo) for todo in todos]
 
 
-@todos_router.get("/{public_id}", status_code=200)
+@todos_router.get("/{public_id}", status_code=status.HTTP_200_OK)
 @inject
 def find_by_id(public_id: UUID, session: db_session,
                todo_service: TodoService = Depends(Provide[ServiceContainer.todo_service])):
     todo = todo_service.find_by_id(public_id, session)
     if todo is None:
-        raise HTTPException(status_code=404, detail=f"Todo with id [{public_id}] not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Todo with id [{public_id}] not found")
 
     return TodoResponse(todo)
 
@@ -42,12 +41,12 @@ def create_todo(request: TodoRequest, session: db_session,
                     Provide[ServiceContainer.category_service])) -> TodoResponse:
     category = category_service.find_by_id(request.category_public_id, session)
     if category is None:
-        raise HTTPException(status_code=404, detail=f"Category with id [{request.category_public_id}] not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Category with id [{request.category_public_id}] not found")
 
     todo = todo_service.add(ToDo(category, request.title, request.description, request.priority, request.is_completed),
                             session)
     if todo is None:
-        raise HTTPException(status_code=500, detail=f"Failed to add a new ToDo")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to add a new ToDo")
 
     return TodoResponse(todo)
 
@@ -58,5 +57,5 @@ def delete_by_id(public_id: UUID, session: db_session,
     todo_service.set_session(session)
     category = todo_service.find_by_id(public_id)
     if category is None:
-        raise HTTPException(status_code=404, detail=f"ToDo with id [{public_id}] not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"ToDo with id [{public_id}] not found")
     todo_service.delete(category)

@@ -4,6 +4,8 @@ from fastapi import APIRouter, HTTPException
 from fastapi.params import Depends
 from dependency_injector.wiring import inject, Provide
 from starlette import status
+from starlette.status import HTTP_400_BAD_REQUEST
+
 from app.models.todo import Category
 from app.config.database import db_session
 from app.routers.dto.category import CategoryResponse, CategoryRequest
@@ -31,7 +33,7 @@ def find_by_id(public_id: UUID, session: db_session,
                    Provide[ServiceContainer.category_service])) -> CategoryResponse:
     category = category_service.find_by_id(public_id, session)
     if category is None:
-        raise HTTPException(status_code=404, detail=f"Category with id [{public_id}] not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Category with id [{public_id}] not found")
     return CategoryResponse(category)
 
 
@@ -42,7 +44,8 @@ def create(category: CategoryRequest, session: db_session,
     category_service.set_session(session)
     found = category_service.find_by_name(category.name)
     if found is not None:
-        raise HTTPException(status_code=400, detail=f"Category with name [{category.name}] already exists")
+        raise HTTPException(status_code=HTTP_400_BAD_REQUEST,
+                            detail=f"Category with name [{category.name}] already exists")
 
     new_category = category_service.add(Category(category.name))
     return CategoryResponse(new_category)
@@ -55,11 +58,12 @@ def update(public_id: UUID, category: CategoryRequest, session: db_session,
     category_service.set_session(session)
     to_be_updated = category_service.find_by_id(public_id)
     if to_be_updated is None:
-        raise HTTPException(status_code=404, detail=f"Category with id [{public_id}] not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Category with id [{public_id}] not found")
 
     find_by_name = category_service.find_by_name(category.name)
     if find_by_name is not None:
-        raise HTTPException(status_code=400, detail=f"Category with name [{category.name}] already exists")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Category with name [{category.name}] already exists")
 
     to_be_updated.name = category.name
     to_be_updated = category_service.update(to_be_updated)
@@ -73,5 +77,5 @@ def delete_by_id(public_id: UUID, session: db_session,
     category_service.set_session(session)
     category = category_service.find_by_id(public_id)
     if category is None:
-        raise HTTPException(status_code=404, detail=f"Category with id [{public_id}] not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Category with id [{public_id}] not found")
     category_service.delete(category)
