@@ -12,7 +12,7 @@ class UserResponse(BaseModel):
         "json_schema_extra": {
             "example": {
                 "public_id": "e77b0399-5306-4b7b-9cc2-9ca89211585b",
-                "email": "john.dow@not-gmail.com",
+                "email": "<your email>",
                 "first_name": "John",
                 "last_name": "Doe",
                 "role": "USER"
@@ -40,10 +40,10 @@ class UserRequest(BaseModel):
     model_config = {
         "json_schema_extra": {
             "example": {
-                "email": "john.dow@not-gmail.com",
+                "email": "<your email>",
                 "first_name": "John",
                 "last_name": "Doe",
-                "password": "8d#kd#a23",
+                "password": "<your password>",
                 "role": "USER"
             }
         }
