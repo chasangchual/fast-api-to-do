@@ -4,7 +4,6 @@ from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, CheckConstr
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.config.database import Base
-from app.models.types import Email
 
 class User(Base):
     __tablename__ = "users"
@@ -17,7 +16,7 @@ class User(Base):
     hashed_password = Column(String, index=True, nullable=False)
     is_active = Column(Boolean, server_default='true', nullable=False)
     role = Column(String(16), server_default='USER', nullable=False)
-    todos = relationship('Todo', back_populates='owner')
+    todos = relationship('ToDo', back_populates='owner')
     salts = relationship('Salt', back_populates='user', cascade='all, delete-orphan')
 
 
