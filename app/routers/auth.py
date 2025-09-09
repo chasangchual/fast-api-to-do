@@ -7,6 +7,7 @@ from app.routers.dto.user import NewUserRequest, UserResponse, SigninRequest
 from app.config.database import db_session
 from app.setvices.auth_service import AuthService
 from app.setvices.service_container import ServiceContainer
+from app.routers.dto.JwtToken import DEFAULT_ACCESS_TOKEN_EXPIRES_IN_SECONDS, DEFAULT_REFRESH_TOKEN_EXPIRES_IN_DAYS
 from fastapi.params import Depends
 from app.models.user import User
 from dependency_injector.wiring import inject, Provide
@@ -52,7 +53,8 @@ async def signin(request: SigninRequest, session: db_session,
 async def get_token(request_form: Annotated[OAuth2PasswordRequestForm, Depends()], session: db_session,
                     auth_service: AuthService = Depends(Provide[ServiceContainer.auth_service])) -> JwtTokenResponse:
     try:
-        token = auth_service.authenticate(request_form.username, request_form.password, session)
+        token = auth_service.authenticate(request_form.username, request_form.password,
+                                          DEFAULT_ACCESS_TOKEN_EXPIRES_IN_SECONDS, DEFAULT_REFRESH_TOKEN_EXPIRES_IN_DAYS, session)
         if token is None:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid Signin Request")
         return token

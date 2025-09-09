@@ -1,21 +1,33 @@
+import uuid
+from typing import Dict
+
 from fastapi import Depends
 from sqlalchemy.sql.annotation import Annotated
 
 from app.models.user import User, Salt
-from app.routers.dto.JwtToken import JwtTokenResponse, JwtBearerTokenResponse
-from app.routers.dto.user import NewUserRequest, UserResponse, SigninRequest
+from app.routers.dto.JwtToken import JwtBearerTokenResponse
+from app.routers.dto.user import NewUserRequest, SigninRequest
 from app.setvices.service_base import ServiceBase
 from passlib.context import CryptContext
 import bcrypt
 from app.config.database import db_session
 from jose import jwt, JWTError
 from datetime import datetime, timedelta, timezone
-from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer
 
 SECRET_KEY = 'df50448df8c9430513b8196e4ac445345887f8fd95ff4adc0b2fe766aed1909a'
 ALGORITHM = 'HS256'
-REFRESH_TOKEN_EXPIRES_IN = timedelta(days=7)
 oauth2_bearer = OAuth2PasswordBearer(tokenUrl="auth")
+
+
+def _get_registered_jwt_claims(user_name: str, expires: datetime) -> None | Dict:
+    return {
+        'jti': str(uuid.uuid4()),
+        'sub': user_name,
+        "exp": expires,
+        "iat": datetime.now(timezone.utc),
+        "type": "refresh_token"
+    }
 
 class AuthService(ServiceBase):
     def __init__(self, db=None):
@@ -51,7 +63,7 @@ class AuthService(ServiceBase):
         else:
             return None
 
-    def authenticate(self, user_name: str, password: str, session: db_session = None) -> None | JwtBearerTokenResponse:
+    def authenticate(self, user_name: str, password: str, access_token_expires_in: int, refresh_token_expires_in, session: db_session = None) -> None | JwtBearerTokenResponse:
         _session = self._get_session(session)
         user = _session.query(User).filter(User.email == user_name).first()
         if user is None:
@@ -63,33 +75,23 @@ class AuthService(ServiceBase):
 
         salted_password = password + salt.salt
         if bcrypt.checkpw(salted_password.encode('utf-8'), user.hashed_password.encode('utf-8')):
-            access_token = self.create_access_token(user.email, user.public_id, timedelta(minutes=20))
-            refresh_token = self.create_refresh_token(user.email, user.public_id)
-            return JwtBearerTokenResponse(access_token, refresh_token)
+            access_token = self.create_access_token(user.email, user.public_id, timedelta(seconds=access_token_expires_in))
+            refresh_token = self.create_refresh_token(user.email, user.public_id, timedelta(days=refresh_token_expires_in))
+            return JwtBearerTokenResponse(access_token, refresh_token, access_token_expires_in)
         else:
             return None
 
     def create_access_token(self, user_name: str, user_id: str, expires_delta: timedelta) -> str:
         expires = datetime.now(timezone.utc) + expires_delta
-        access_token = {
-            'sub': user_name,
-            'id': str(user_id),
-            "exp": expires,
-            "iat": datetime.now(timezone.utc),
-            "type": "access_token"
-        }
+        access_token = _get_registered_jwt_claims(user_name, expires)
+        access_token.update({"type": "access_token", "id": str(user_id)})
 
         return jwt.encode(access_token, SECRET_KEY, algorithm=ALGORITHM)
 
-    def create_refresh_token(self, user_name: str, user_id: str) -> str:
-        expires = datetime.now(timezone.utc) + REFRESH_TOKEN_EXPIRES_IN
-        refresh_token = {
-            'sub': user_name,
-            'id': str(user_id),
-            "exp": expires,
-            "iat": datetime.now(timezone.utc),
-            "type": "refresh_token"
-        }
+    def create_refresh_token(self, user_name: str, user_id: str, expires_delta: timedelta) -> str:
+        expires = datetime.now(timezone.utc) + expires_delta
+        refresh_token = _get_registered_jwt_claims(user_name, expires)
+        refresh_token.update({"type": "refresh_token", "id": str(user_id)})
 
         return jwt.encode(refresh_token, SECRET_KEY, algorithm=ALGORITHM)
 
