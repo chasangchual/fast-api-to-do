@@ -16,7 +16,7 @@ todos_router = APIRouter(
 
 @todos_router.get("", status_code=status.HTTP_200_OK)
 @inject
-def get_all(session: db_session,
+async def get_all(session: db_session,
             todo_service: TodoService = Depends(Provide[ServiceContainer.todo_service])):
     todos = todo_service.find_all(session)
     return [TodoResponse(todo) for todo in todos]
@@ -24,7 +24,7 @@ def get_all(session: db_session,
 
 @todos_router.get("/{public_id}", status_code=status.HTTP_200_OK)
 @inject
-def find_by_id(public_id: UUID, session: db_session,
+async def find_by_id(public_id: UUID, session: db_session,
                todo_service: TodoService = Depends(Provide[ServiceContainer.todo_service])):
     todo = todo_service.find_by_id(public_id, session)
     if todo is None:
@@ -35,7 +35,7 @@ def find_by_id(public_id: UUID, session: db_session,
 
 @todos_router.post("", status_code=status.HTTP_201_CREATED)
 @inject
-def create_todo(request: TodoRequest, session: db_session,
+async def create_todo(request: TodoRequest, session: db_session,
                 todo_service: TodoService = Depends(Provide[ServiceContainer.todo_service]),
                 category_service: CategoryService = Depends(
                     Provide[ServiceContainer.category_service])) -> TodoResponse:
@@ -52,7 +52,7 @@ def create_todo(request: TodoRequest, session: db_session,
 
 @todos_router.delete("/{public_id}", status_code=status.HTTP_200_OK)
 @inject
-def delete_by_id(public_id: UUID, session: db_session,
+async def delete_by_id(public_id: UUID, session: db_session,
                  todo_service: TodoService = Depends(Provide[ServiceContainer.todo_service])):
     todo_service.set_session(session)
     category = todo_service.find_by_id(public_id)

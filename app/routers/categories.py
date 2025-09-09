@@ -19,7 +19,7 @@ categories_router = APIRouter(
 
 @categories_router.get("", status_code=status.HTTP_200_OK)
 @inject
-def get_all(session: db_session,
+async def get_all(session: db_session,
             category_service: CategoryService = Depends(Provide[ServiceContainer.category_service])) -> List[
     CategoryResponse]:
     categories = category_service.find_all(session)
@@ -28,7 +28,7 @@ def get_all(session: db_session,
 
 @categories_router.get("/{public_id}", status_code=status.HTTP_200_OK)
 @inject
-def find_by_id(public_id: UUID, session: db_session,
+async def find_by_id(public_id: UUID, session: db_session,
                category_service: CategoryService = Depends(
                    Provide[ServiceContainer.category_service])) -> CategoryResponse:
     category = category_service.find_by_id(public_id, session)
@@ -39,7 +39,7 @@ def find_by_id(public_id: UUID, session: db_session,
 
 @categories_router.post("", status_code=status.HTTP_201_CREATED)
 @inject
-def create(category: CategoryRequest, session: db_session,
+async def create(category: CategoryRequest, session: db_session,
            category_service: CategoryService = Depends(Provide[ServiceContainer.category_service])) -> CategoryResponse:
     category_service.set_session(session)
     found = category_service.find_by_name(category.name)
@@ -53,7 +53,7 @@ def create(category: CategoryRequest, session: db_session,
 
 @categories_router.put("/{public_id}", status_code=status.HTTP_201_CREATED)
 @inject
-def update(public_id: UUID, category: CategoryRequest, session: db_session,
+async def update(public_id: UUID, category: CategoryRequest, session: db_session,
            category_service: CategoryService = Depends(Provide[ServiceContainer.category_service])) -> CategoryResponse:
     category_service.set_session(session)
     to_be_updated = category_service.find_by_id(public_id)
@@ -72,7 +72,7 @@ def update(public_id: UUID, category: CategoryRequest, session: db_session,
 
 @categories_router.delete("/{public_id}", status_code=status.HTTP_200_OK)
 @inject
-def delete_by_id(public_id: UUID, session: db_session,
+async def delete_by_id(public_id: UUID, session: db_session,
                  category_service: CategoryService = Depends(Provide[ServiceContainer.category_service])):
     category_service.set_session(session)
     category = category_service.find_by_id(public_id)
