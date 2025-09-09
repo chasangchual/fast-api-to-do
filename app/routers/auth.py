@@ -53,6 +53,7 @@ async def signin(request: SigninRequest, session: db_session,
 async def get_token(request_form: Annotated[OAuth2PasswordRequestForm, Depends()], session: db_session,
                     auth_service: AuthService = Depends(Provide[ServiceContainer.auth_service])) -> JwtTokenResponse:
     try:
+        # verify client id and secret
         token = auth_service.authenticate(request_form.username, request_form.password,
                                           DEFAULT_ACCESS_TOKEN_EXPIRES_IN_SECONDS, DEFAULT_REFRESH_TOKEN_EXPIRES_IN_DAYS, session)
         if token is None:
