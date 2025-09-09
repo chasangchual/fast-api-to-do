@@ -30,7 +30,7 @@ class UserResponse(BaseModel):
         }
         super().__init__(**user_data)
 
-class UserRequest(BaseModel):
+class NewUserRequest(BaseModel):
     email: str = Field(..., min_length=5, max_length=128)
     first_name: str = Field(..., min_length=1, max_length=64)
     last_name: str = Field(..., min_length=1, max_length=64)
@@ -45,6 +45,19 @@ class UserRequest(BaseModel):
                 "last_name": "Doe",
                 "password": "<your password>",
                 "role": "USER"
+            }
+        }
+    }
+
+class SigninRequest(BaseModel):
+    email: str = Field(..., min_length=5, max_length=128)
+    password: str = Field(..., min_length=5, max_length=64)
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "email": "<your email>",
+                "password": "<your password>"
             }
         }
     }

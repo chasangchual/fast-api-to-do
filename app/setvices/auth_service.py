@@ -1,17 +1,16 @@
 from app.models.user import User, Salt
-from app.routers.dto.user import UserRequest, UserResponse
+from app.routers.dto.user import NewUserRequest, UserResponse, SigninRequest
 from app.setvices.service_base import ServiceBase
 from passlib.context import CryptContext
 import bcrypt
 from app.config.database import db_session
-
 
 class AuthService(ServiceBase):
     def __init__(self, db=None):
         super().__init__(db)
         self.bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-    def add(self, request: UserRequest, session: db_session = None) -> None | User:
+    def add(self, request: NewUserRequest, session: db_session = None) -> None | User:
         salt_str = bcrypt.gensalt().decode("utf-8")
 
         user = self._mapToNewUser(request, salt_str)
@@ -24,7 +23,23 @@ class AuthService(ServiceBase):
 
         return user
 
-    def _mapToNewUser(self, userRequest: UserRequest, salt: str) -> User:
+    def signin(self, request: SigninRequest, session: db_session = None) -> None | User:
+        _session = self._get_session(session)
+        _user = _session.query(User).filter(User.email == request.email).first()
+        if _user is None:
+            return None
+
+        _salt = _session.query(Salt).filter(Salt.user == _user).first()
+        if _salt is None:
+            return None
+        
+        _salted_password = request.password + _salt.salt
+        if bcrypt.checkpw(_salted_password.encode('utf-8'), _user.hashed_password.encode('utf-8')):
+            return _user
+        else:
+            return None
+
+    def _mapToNewUser(self, userRequest: NewUserRequest, salt: str) -> User:
         user = User()
         user.email = userRequest.email
         user.first_name = userRequest.first_name
