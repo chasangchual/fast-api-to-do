@@ -17,7 +17,7 @@ from fastapi.security import OAuth2PasswordBearer
 
 SECRET_KEY = 'df50448df8c9430513b8196e4ac445345887f8fd95ff4adc0b2fe766aed1909a'
 ALGORITHM = 'HS256'
-oauth2_bearer = OAuth2PasswordBearer(tokenUrl="auth")
+oauth2_bearer = OAuth2PasswordBearer(tokenUrl="token")
 
 
 def _get_registered_jwt_claims(user_name: str, expires: datetime) -> None | Dict:
@@ -28,6 +28,31 @@ def _get_registered_jwt_claims(user_name: str, expires: datetime) -> None | Dict
         "iat": datetime.now(timezone.utc),
         "type": "refresh_token"
     }
+
+
+def decode(token: Annotated[str, Depends(oauth2_bearer)], session: db_session = None) -> dict:
+    try:
+        decoded_jwt = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return decoded_jwt if decoded_jwt['expires'] >= datetime.now(timezone.utc) else None
+    except:
+        return {}
+
+
+def create_access_token(user_name: str, user_id: str, expires_delta: timedelta) -> str:
+    expires = datetime.now(timezone.utc) + expires_delta
+    access_token = _get_registered_jwt_claims(user_name, expires)
+    access_token.update({"type": "access_token", "id": str(user_id)})
+
+    return jwt.encode(access_token, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def create_refresh_token(user_name: str, user_id: str, expires_delta: timedelta) -> str:
+    expires = datetime.now(timezone.utc) + expires_delta
+    refresh_token = _get_registered_jwt_claims(user_name, expires)
+    refresh_token.update({"type": "refresh_token", "id": str(user_id)})
+
+    return jwt.encode(refresh_token, SECRET_KEY, algorithm=ALGORITHM)
+
 
 class AuthService(ServiceBase):
     def __init__(self, db=None):
@@ -75,27 +100,13 @@ class AuthService(ServiceBase):
 
         salted_password = password + salt.salt
         if bcrypt.checkpw(salted_password.encode('utf-8'), user.hashed_password.encode('utf-8')):
-            access_token = self.create_access_token(user.email, user.public_id, timedelta(seconds=access_token_expires_in))
-            refresh_token = self.create_refresh_token(user.email, user.public_id, timedelta(days=refresh_token_expires_in))
+            access_token = create_access_token(user.email, user.public_id, timedelta(seconds=access_token_expires_in))
+            refresh_token = create_refresh_token(user.email, user.public_id, timedelta(days=refresh_token_expires_in))
             return JwtBearerTokenResponse(access_token, refresh_token, access_token_expires_in)
         else:
             return None
 
-    def create_access_token(self, user_name: str, user_id: str, expires_delta: timedelta) -> str:
-        expires = datetime.now(timezone.utc) + expires_delta
-        access_token = _get_registered_jwt_claims(user_name, expires)
-        access_token.update({"type": "access_token", "id": str(user_id)})
-
-        return jwt.encode(access_token, SECRET_KEY, algorithm=ALGORITHM)
-
-    def create_refresh_token(self, user_name: str, user_id: str, expires_delta: timedelta) -> str:
-        expires = datetime.now(timezone.utc) + expires_delta
-        refresh_token = _get_registered_jwt_claims(user_name, expires)
-        refresh_token.update({"type": "refresh_token", "id": str(user_id)})
-
-        return jwt.encode(refresh_token, SECRET_KEY, algorithm=ALGORITHM)
-
-    def get_current_user(self, token: Annotated[str, Depends(oauth2_bearer)]) -> None | str:
+    async def get_current_user(self, token: Annotated[str, Depends(oauth2_bearer)], session: db_session = None) -> None | User:
         try:
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
             if payload["type"] == "access_token":
@@ -103,12 +114,15 @@ class AuthService(ServiceBase):
                 user_id: str = payload["id"]
                 if user_name is None or user_id is None:
                     return None
-                return user_name
+                _session = self._get_session(session)
+
+                user = _session.query(User).filter(User.email == user_name).first()
+
+                return user
             else:
                 return None
         except JWTError:
             return None
-
 
     def _mapToNewUser(self, userRequest: NewUserRequest, salt: str) -> User:
         user = User()

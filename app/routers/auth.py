@@ -64,3 +64,21 @@ async def get_token(request_form: Annotated[OAuth2PasswordRequestForm, Depends()
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
         )
+
+@auth_router.post("/access_token", status_code=status.HTTP_200_OK)
+@inject
+async def get_token(access_token: str,
+                    session: db_session,
+                    auth_service: AuthService = Depends(Provide[ServiceContainer.auth_service])) -> UserResponse:
+    try:
+        # verify client id and secret
+        user = await auth_service.get_current_user(access_token, session)
+
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid access token or expired access token.")
+        return UserResponse(user)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
