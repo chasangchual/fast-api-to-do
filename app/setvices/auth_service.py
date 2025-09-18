@@ -17,8 +17,6 @@ from fastapi.security import OAuth2PasswordBearer
 
 SECRET_KEY = 'df50448df8c9430513b8196e4ac445345887f8fd95ff4adc0b2fe766aed1909a'
 ALGORITHM = 'HS256'
-oauth2_bearer = OAuth2PasswordBearer(tokenUrl="token")
-
 
 def _get_registered_jwt_claims(user_name: str, expires: datetime) -> None | Dict:
     return {
@@ -29,14 +27,11 @@ def _get_registered_jwt_claims(user_name: str, expires: datetime) -> None | Dict
         "type": "refresh_token"
     }
 
-
-def decode(token: Annotated[str, Depends(oauth2_bearer)], session: db_session = None) -> dict:
-    try:
-        decoded_jwt = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return decoded_jwt if decoded_jwt['expires'] >= datetime.now(timezone.utc) else None
-    except:
-        return {}
-
+def decode_token(token: str) -> Dict | None:
+        try:
+            return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        except JWTError:
+            return None
 
 def create_access_token(user_name: str, user_id: str, expires_delta: timedelta) -> str:
     expires = datetime.now(timezone.utc) + expires_delta
@@ -55,8 +50,8 @@ def create_refresh_token(user_name: str, user_id: str, expires_delta: timedelta)
 
 
 class AuthService(ServiceBase):
-    def __init__(self, db=None):
-        super().__init__(db)
+    def __init__(self, session=None):
+        super().__init__(session)
         self.bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
     def add(self, request: NewUserRequest, session: db_session = None) -> None | User:
@@ -88,7 +83,8 @@ class AuthService(ServiceBase):
         else:
             return None
 
-    def authenticate(self, user_name: str, password: str, access_token_expires_in: int, refresh_token_expires_in, session: db_session = None) -> None | JwtBearerTokenResponse:
+    def authenticate(self, user_name: str, password: str, access_token_expires_in: int, refresh_token_expires_in,
+                     session: db_session = None) -> None | JwtBearerTokenResponse:
         _session = self._get_session(session)
         user = _session.query(User).filter(User.email == user_name).first()
         if user is None:
@@ -106,7 +102,8 @@ class AuthService(ServiceBase):
         else:
             return None
 
-    async def get_current_user(self, token: Annotated[str, Depends(oauth2_bearer)], session: db_session = None) -> None | User:
+    async def get_current_user(self, token: str,
+                               session: db_session = None) -> None | User:
         try:
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
             if payload["type"] == "access_token":
@@ -124,6 +121,15 @@ class AuthService(ServiceBase):
         except JWTError:
             return None
 
+    def find_user_by_user_name(self, user_name: str,
+                                     session: db_session = None) -> None | User:
+        try:
+            _session = self._get_session(session)
+            user = _session.query(User).filter(User.email == user_name).first()
+            return user
+        except JWTError:
+            return None
+
     def _mapToNewUser(self, userRequest: NewUserRequest, salt: str) -> User:
         user = User()
         user.email = userRequest.email
@@ -133,7 +139,6 @@ class AuthService(ServiceBase):
         user.role = userRequest.role
         user.is_active = True
         return user
-
 
     def _new_salt(self, user: User, salt_str: str) -> Salt:
         salt = Salt()

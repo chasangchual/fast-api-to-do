@@ -2,13 +2,14 @@ from typing import List
 from uuid import UUID
 
 from app.config.database import db_session
+from app.models import User
 from app.models.todo import ToDo
 from app.setvices.service_base import ServiceBase
 
 
 class TodoService(ServiceBase):
-    def __init__(self, db=None):
-        super().__init__(db)
+    def __init__(self, session=None):
+        super().__init__(session)
 
     def find_all(self, session: db_session = None) -> List[ToDo]:
         return self._get_session(session).query(ToDo).all()
@@ -18,6 +19,9 @@ class TodoService(ServiceBase):
 
     def find_all_by_title(self, title: str, session: db_session = None) -> List[ToDo]:
         return self._get_session(session).query(ToDo).filter(ToDo.title.contains(title))
+
+    def find_by_owner(self, owner: User, session: db_session = None) -> None | List[ToDo]:
+        return self._get_session(session).query(ToDo).filter(ToDo.owner_id == owner.id)
 
     def add(self, todo: ToDo, session: db_session = None) -> None | ToDo:
         _session = self._get_session(session)

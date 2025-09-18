@@ -7,8 +7,8 @@ from app.setvices.service_base import ServiceBase
 
 
 class CategoryService(ServiceBase):
-    def __init__(self, db=None):
-        super().__init__(db)
+    def __init__(self, session=None):
+        super().__init__(session)
 
     def find_all(self, session: db_session = None) -> List[Category]:
         return self._get_session(session).query(Category).all()

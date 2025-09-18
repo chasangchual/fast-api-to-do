@@ -2,9 +2,8 @@ from sqlalchemy.orm import Session
 from app.config.database import db_session
 
 class ServiceBase:
-    def __init__(self, db=None):
-        self.db = db
-        self.session = None
+    def __init__(self, session=None):
+        self.session = session
 
     def set_session(self, session: db_session):
         self.session = session

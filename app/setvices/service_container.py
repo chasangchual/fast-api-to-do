@@ -7,6 +7,6 @@ from app.setvices.todo_service import TodoService
 
 class ServiceContainer(containers.DeclarativeContainer):
     config = providers.Configuration()
-    category_service = providers.Factory(CategoryService, db=db_session)
-    todo_service = providers.Factory(TodoService, db=db_session)
-    auth_service = providers.Factory(AuthService, db=db_session)
+    category_service = providers.Factory(CategoryService, session=db_session)
+    todo_service = providers.Factory(TodoService, session=db_session)
+    auth_service = providers.Factory(AuthService, session=db_session)
