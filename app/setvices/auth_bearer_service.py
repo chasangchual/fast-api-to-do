@@ -31,7 +31,12 @@ class JWTBearer(HTTPBearer):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail="Invalid or expired token.")
 
-        return auth_service.find_user_by_user_name(jwt_properties["sub"], session)
+        authenticated_user: User = auth_service.find_user_by_user_name(jwt_properties["sub"], session)
+
+        if authenticated_user is None:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                detail="Invalid or expired token.")
+        return authenticated_user
 
     def decode_token(self, jwtToken: str) -> dict | None:
         try:
