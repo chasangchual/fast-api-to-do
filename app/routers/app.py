@@ -8,6 +8,7 @@ from pathlib import Path
 # TEMPLATES_DIR = BASE_DIR.parent / "templates"
 #
 # templates = Jinja2Templates(directory=TEMPLATES_DIR)
+
 templates = Jinja2Templates(directory="templates")
 
 app_router = APIRouter(
